@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+
+    <style>
+        .list-group-item {
+            height: 50px;
+            width: 590px;
+        }
+
+        .btn-delete {
+            opacity: 0;
+            cursor: pointer;
+            background-color: #224;
+            color: aliceblue;
+            border-color: #224;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            margin-left: 10px;
+        }
+
+        .btn-delete:hover {
+            color: #224;
+            background-color: aliceblue;
+            border-radius: 6px;
+            border: 1px solid #224;
+        }
+
+        .todo:hover .btn-delete {
+            opacity: 1;
+        }
+
+        input[type=checkbox]:checked~label {
+            text-decoration: line-through;
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        .todo__content-wrapper {
+            flex: 1;
+        }
+
+        .options div,
+        .clear-all {
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+
+        body {
+            background-color: #224;
+            color: aliceblue;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: 400;
+        }
+
+        .container {
+            padding: 100px 0 30px 0;
+        }
+
+        .col-lg-6 {
+            border: 1px solid aliceblue;
+            border-radius: 10px;
+            padding: 30px 40px 50px 40px;
+        }
+
+        .input-group-append {
+            padding-left: 10px;
+        }
+
+        .btn {
+            cursor: pointer;
+            color: aliceblue;
+            border-color: aliceblue;
+        }
+
+
+        .options div,
+        .clear-all,
+        .clear-done {
+            padding: 4px;
+        }
+
+        .btn:hover,
+        .options div.active:hover,
+        .clear-all:hover,
+        .clear-done:hover {
+            background-color: aliceblue;
+            color: #224;
+        }
+
+        .info {
+            padding-top: 10px;
+        }
+
+        .text-center {
+            padding-bottom: 10px;
+        }
+
+        .btn-save {
+            float: right;
+            margin-top: 10px;
+        }
+
+        .hide {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <h1 class="text-center">待 辦 事 項</h1>
+                <div class="input-group mb-3">
+                    <input type="text" class="input-todo form-control" placeholder="新增待辦事項">
+                    <div class="input-group-append">
+                        <button class="btn btn-add" type="button">新增</button>
+                    </div>
+                </div>
+
+                <div class="todos list-group ">
+                    <!--  -->
+                </div>
+
+                <div class="info mt-1 d-flex justify-content-between align-items-center">
+                    <div>共 <span class="uncomplete-count">0</span> 個未完成</div>
+                    <div class="options d-flex">
+                        <div class="active" data-filter="all">所有事項</div>
+                        <div class="ml-2" data-filter="uncomplete">待辦事項</div>
+                        <div class="ml-2" data-filter="done">完成事項</div>
+                    </div>
+                    <div>
+                        <button type="button" class="btn clear-done">
+                            移出已完成事項
+                        </button>
+                        <!-- <button type="button" class="btn clear-all">
+                            全部清除
+                        </button> -->
+                    </div>
+                </div>
+                <!-- <button type="button" class="btn btn-save">儲存</button> -->
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+
+    let id = 1;  // 新增的 id 嚴格遞增
+    let todoCounts = 0   // 共有多少個 todo
+    let uncompleteTodoCount = 0   // 有多少個未完成 todo
+    const template = `
+                        <div class="todo list-group-item list-group-item-action justify-content-between align-items-center">
+                        <div class="todo__content-wrapper custom-control custom-checkbox">
+                            <input type="checkbox" class="check-todo custom-control-input" id="todo-{id}">
+                            <label class="todo__content custom-control-label" for="todo-{id}">{content}</label>
+                        <button type="button" class="btn-delete btn btn-danger">刪除</button>
+                        </div>
+                        </div>
+                        `
+
+    $('.btn-add').click(() => {   // addtodo
+        addTodo()
+    })
+
+    $('.input-todo').keydown(e => {   // 按鍵盤 enter 就可以新增
+        if (e.key === 'Enter') {
+            addTodo()
+        }
+    })
+
+    $('.todos').on('click', '.btn-delete', (e) => {   // delete
+        $(e.target).parent().parent().remove();
+        todoCounts--
+        const isChecked = $(e.target).parent().parent().find('.check-todo').is(':checked')
+        if (!isChecked) {
+            uncompleteTodoCount--
+        }
+        updateCounter()
+    })
+
+    $('.todos').on('change', '.check-todo', (e) => {   // 幫打勾的事項新增事件 event (才可以對他進行動作)
+        const target = $(e.target)
+        const isChecked = target.is(":checked")
+        if (isChecked) {
+            target.parents('.todo').addClass('checked')  // 方便判斷 checked box 狀態
+            uncompleteTodoCount--
+        } else {
+            target.parents('.todo').removeClass('checked')
+            uncompleteTodoCount++
+        }
+        updateCounter()
+    })
+
+    $('.clear-done').click(() => {
+        let count = 0
+        $('.todo.checked').each(function (i, el) {
+            todoCounts--
+            el.remove()
+        })   // 同時滿足.todo跟.checked .each() 搜尋到所有元素
+    })
+
+    $('.options').on('click', 'div', e => {
+        const target = $(e.target)
+        const filter = target.attr('data-filter')
+        $('.options div.active').removeClass('active')
+        target.addClass('active')
+        if (filter === 'all') {
+            $('.todo').each(function (i, el) {
+                $(el).removeClass('hide')
+            })
+        } else if (filter === 'uncomplete') {
+            $('.todo').each(function (i, el) {
+                if ($(el).hasClass('checked'))
+                    $(el).addClass('hide')
+            })
+        } else {
+            $('.todo').each(function (i, el) {
+                if (!$(el).hasClass('checked')) {
+                    $(el).addClass('hide')
+                } else {
+                    $(el).removeClass('hide')
+                }
+            })
+        }
+        console.log(target.attr('data-filter'))  // 拿綁在牠們身上的屬性 .arrt()
+    })
+
+    function updateCounter() {   // 更新狀態的 fun
+        $('.uncomplete-count').text(uncompleteTodoCount)
+    }
+
+    function addTodo() {
+        const value = $('.input-todo').val()	// 取輸入框內值 .val()
+        if (!value) return
+        $('.todos').prepend(
+            template
+                .replace('{content}', escapeHtml(value))
+                .replace(/id/g, id)
+        )
+        id += 1
+        todoCounts++
+        uncompleteTodoCount++
+        updateCounter()
+        $('.input-todo').val('') // 新增完後清空輸入欄位
+    }
+
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+
+</html>
